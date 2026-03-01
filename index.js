@@ -1,59 +1,53 @@
+require("dotenv").config();
 const express = require("express");
 const {
   Client,
   GatewayIntentBits,
-  EmbedBuilder,
   REST,
   Routes,
-  SlashCommandBuilder
+  SlashCommandBuilder,
+  EmbedBuilder,
 } = require("discord.js");
 
 const app = express();
+app.use(express.json());
 
-// ====== EXPRESS SERVER ======
-app.get("/", (req, res) => {
-  res.send("Market Bot is running!");
-});
+/* =========================
+   DISCORD CLIENT
+========================= */
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-// ====== DISCORD CLIENT ======
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [GatewayIntentBits.Guilds],
 });
 
-// ====== SLASH COMMANDS ======
+/* =========================
+   SLASH COMMANDS
+========================= */
+
 const commands = [
   new SlashCommandBuilder()
     .setName("sell")
     .setDescription("โพสต์ขายสินค้า")
-    .addStringOption(option =>
-      option.setName("สินค้า").setDescription("ชื่อสินค้า").setRequired(true)
+    .addStringOption((option) =>
+      option.setName("ชื่อสินค้า").setDescription("ชื่อสินค้า").setRequired(true)
     )
-    .addStringOption(option =>
-      option.setName("ราคา").setDescription("ราคา").setRequired(true)
-    )
-    .addStringOption(option =>
-      option.setName("รายละเอียด")
-        .setDescription("รายละเอียดเพิ่มเติม")
-        .setRequired(false)
+    .addStringOption((option) =>
+      option.setName("ราคา").setDescription("ราคาสินค้า").setRequired(true)
     ),
 
   new SlashCommandBuilder()
     .setName("buy")
-    .setDescription("โพสต์รับซื้อสินค้า")
-    .addStringOption(option =>
-      option.setName("สินค้า").setDescription("ชื่อสินค้า").setRequired(true)
-    )
-    .addStringOption(option =>
-      option.setName("งบประมาณ").setDescription("งบประมาณ").setRequired(true)
-    )
-];
+    .setDescription("โพสต์หาซื้อสินค้า")
+    .addStringOption((option) =>
+      option.setName("ชื่อสินค้า").setDescription("ชื่อสินค้า").setRequired(true)
+    ),
+].map((command) => command.toJSON());
 
-client.once("ready", async () => {
+/* =========================
+   REGISTER COMMANDS
+========================= */
+
+client.once("clientReady", async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
   const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
@@ -63,75 +57,90 @@ client.once("ready", async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
+
     console.log("Slash commands registered!");
   } catch (error) {
     console.error(error);
   }
 });
 
-// ====== INTERACTION ======
-client.on("interactionCreate", async interaction => {
+/* =========================
+   COMMAND HANDLER
+========================= */
+
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  const logChannelName = "log-ตลาด";
   const logChannel = interaction.guild.channels.cache.find(
-    ch => ch.name === logChannelName
+    (c) => c.name === "log-ตลาด"
   );
 
   if (!logChannel) {
     return interaction.reply({
-      content: "❌ ไม่พบห้อง log-ตลาด",
-      ephemeral: true
+      content: "ไม่พบห้อง log-ตลาด",
+      ephemeral: true,
     });
   }
 
-  // ===== SELL =====
   if (interaction.commandName === "sell") {
-    const item = interaction.options.getString("สินค้า");
+    const item = interaction.options.getString("ชื่อสินค้า");
     const price = interaction.options.getString("ราคา");
-    const detail = interaction.options.getString("รายละเอียด") || "ไม่มีรายละเอียดเพิ่มเติม";
 
     const embed = new EmbedBuilder()
-      .setTitle("🛒 ประกาศขายสินค้า")
+      .setTitle("📦 มีสินค้ามาขาย!")
       .setColor(0x00ff99)
       .addFields(
-        { name: "📦 สินค้า", value: item },
-        { name: "💰 ราคา", value: price },
-        { name: "📝 รายละเอียด", value: detail },
-        { name: "👤 ผู้ขาย", value: interaction.user.tag }
+        { name: "ผู้ขาย", value: interaction.user.tag },
+        { name: "สินค้า", value: item },
+        { name: "ราคา", value: price }
       )
       .setTimestamp();
 
     await logChannel.send({ embeds: [embed] });
 
     await interaction.reply({
-      content: "✅ โพสต์ขายเรียบร้อยแล้ว!",
-      ephemeral: true
+      content: "โพสต์ขายเรียบร้อย ✅",
+      ephemeral: true,
     });
   }
 
-  // ===== BUY =====
   if (interaction.commandName === "buy") {
-    const item = interaction.options.getString("สินค้า");
-    const budget = interaction.options.getString("งบประมาณ");
+    const item = interaction.options.getString("ชื่อสินค้า");
 
     const embed = new EmbedBuilder()
-      .setTitle("🔎 ประกาศรับซื้อสินค้า")
-      .setColor(0xffcc00)
+      .setTitle("🔎 กำลังหาซื้อสินค้า")
+      .setColor(0x0099ff)
       .addFields(
-        { name: "📦 สินค้าที่ต้องการ", value: item },
-        { name: "💰 งบประมาณ", value: budget },
-        { name: "👤 ผู้ซื้อ", value: interaction.user.tag }
+        { name: "ผู้ซื้อ", value: interaction.user.tag },
+        { name: "สินค้า", value: item }
       )
       .setTimestamp();
 
     await logChannel.send({ embeds: [embed] });
 
     await interaction.reply({
-      content: "✅ โพสต์รับซื้อเรียบร้อยแล้ว!",
-      ephemeral: true
+      content: "โพสต์หาซื้อเรียบร้อย ✅",
+      ephemeral: true,
     });
   }
 });
 
+/* =========================
+   LOGIN BOT
+========================= */
+
 client.login(process.env.TOKEN);
+
+/* =========================
+   EXPRESS SERVER (สำคัญสำหรับ Railway)
+========================= */
+
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
