@@ -1,4 +1,3 @@
-require("dotenv").config();
 const express = require("express");
 const {
   Client,
@@ -9,8 +8,20 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 
+/* =========================
+   EXPRESS SERVER (กัน Railway ดับ)
+========================= */
+
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 /* =========================
    DISCORD CLIENT
@@ -130,17 +141,3 @@ client.on("interactionCreate", async (interaction) => {
 ========================= */
 
 client.login(process.env.TOKEN);
-
-/* =========================
-   EXPRESS SERVER (สำคัญสำหรับ Railway)
-========================= */
-
-const PORT = process.env.PORT || 3000;
-
-app.get("/", (req, res) => {
-  res.send("Bot is running!");
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
