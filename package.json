@@ -1,7 +1,7 @@
 {
   "name": "market-bot",
   "version": "1.0.0",
-  "description": "Discord market bot",
+  "description": "Discord bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
